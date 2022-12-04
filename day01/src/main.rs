@@ -1,16 +1,16 @@
 use std::collections::BinaryHeap;
 
-struct CalorieList<'a> {
-    lines: &'a mut dyn Iterator<Item = String>,
+struct CalorieList {
+    lines: Box<dyn Iterator<Item = String>>,
 }
 
-impl <'a> CalorieList<'a> {
-    fn new(lines: &'a mut dyn Iterator<Item = String>) -> CalorieList<'a> {
+impl CalorieList {
+    fn new(lines: Box<dyn Iterator<Item = String>>) -> CalorieList {
         return CalorieList{lines: lines};
     }
 }
 
-impl <'a> Iterator for CalorieList<'a> {
+impl Iterator for CalorieList {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -53,8 +53,10 @@ fn main() {
         .parse::<usize>()
         .expect("Argument should be an integer");
 
-    let mut calories = std::io::stdin().lines().map(|i| i.unwrap());
-    let calories = CalorieList::new(&mut calories).collect::<BinaryHeap<u32>>();
+    let calories = std::io::stdin().lines().map(|i| i.unwrap());
+    let calories = Box::new(calories);
+    let calories = CalorieList::new(calories).collect::<BinaryHeap<u32>>();
+
     let calories = BinaryHeapDescender::new(calories);
     let n: u32 = calories.take(num_elves).sum();
 
