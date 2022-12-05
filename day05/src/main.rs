@@ -1,6 +1,6 @@
 type Stack = std::collections::VecDeque<char>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Move {
     count: usize,
     from: usize,
@@ -23,7 +23,7 @@ impl Move {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Stacks {
     stacks: Vec<Stack>,
 }
@@ -54,11 +54,29 @@ impl Stacks {
         }
     }
     
-    fn perform(&mut self, mv: &Move) {
-        for i in 0..mv.count {
-            let cur = self.stacks[mv.from].pop_back().expect("Move from empty");
-            self.stacks[mv.to].push_back(cur);
+    fn perform_part1(&self, mv: &Move) -> Self {
+        let mut ret = self.clone();
+
+        for _ in 0..mv.count {
+            let cur = ret.stacks[mv.from].pop_back().expect("Move from empty");
+            ret.stacks[mv.to].push_back(cur);
         }
+
+        return ret;
+    }
+
+    fn perform_part2(&self, mv: &Move) -> Self {
+        let mut ret = self.clone();
+
+        let mut boxes = Vec::new();
+        for _ in 0..mv.count {
+            boxes.push(ret.stacks[mv.from].pop_back().expect("move from empty"));
+        }
+        boxes.reverse();
+        for i in boxes {
+            ret.stacks[mv.to].push_back(i);
+        }
+        return ret;
     }
 
     fn tops(&self) -> String {
@@ -78,23 +96,22 @@ fn main() {
         .expect("Expected one argument")
         .parse::<usize>()
         .expect("Argument should parse");
-    let mut towers = Stacks::new(stacks);
 
-    let lines = std::io::stdin()
+    let mut lines = std::io::stdin()
         .lines()
-        .map(|i| i.unwrap())
+        .map(|i| i.unwrap());
+
+    let crates = (&mut lines)
+        .take_while(|i| !i.is_empty())
         .collect::<Vec<String>>();
+    let moves = lines.into_iter().map(Move::new).collect::<Vec<Move>>();
 
-    let mut lines = lines.into_iter();
+    let mut towers = Stacks::new(stacks);
+    towers.parse_initial(crates);
 
-    let s = (&mut lines).take_while(|i| !i.is_empty()).collect::<Vec<String>>();
-    towers.parse_initial(s);
+    let part1 = moves.iter().fold(towers.clone(), |acc, i| acc.perform_part1(&i));
+    let part2 = moves.into_iter().fold(towers, |acc, i| acc.perform_part2(&i));
 
-    let moves = lines.into_iter().map(Move::new);
-    for mv in moves {
-        towers.perform(&mv);
-    }
-
-    println!("{:?}", towers);
-    println!("{}", towers.tops());
+    println!("part 1: {}", part1.tops());
+    println!("part 2: {}", part2.tops());
 }
