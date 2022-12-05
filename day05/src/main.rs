@@ -58,7 +58,10 @@ impl Stacks {
         let mut ret = self.clone();
 
         for _ in 0..mv.count {
-            let cur = ret.stacks[mv.from].pop_back().expect("Move from empty");
+            let cur = ret
+                .stacks[mv.from]
+                .pop_back()
+                .expect("Move from empty");
             ret.stacks[mv.to].push_back(cur);
         }
 
@@ -67,15 +70,16 @@ impl Stacks {
 
     fn perform_part2(&self, mv: &Move) -> Self {
         let mut ret = self.clone();
-
         let mut boxes = Vec::new();
         for _ in 0..mv.count {
-            boxes.push(ret.stacks[mv.from].pop_back().expect("move from empty"));
+            let cur = ret.
+                stacks[mv.from]
+                .pop_back()
+                .expect("move from empty");
+            boxes.push(cur);
         }
         boxes.reverse();
-        for i in boxes {
-            ret.stacks[mv.to].push_back(i);
-        }
+        for i in boxes { ret.stacks[mv.to].push_back(i); }
         return ret;
     }
 
