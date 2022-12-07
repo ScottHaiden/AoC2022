@@ -20,7 +20,7 @@ impl <'a> Scanner<'a> {
 
         // If we reach the end and haven't found anything, give up.
         if i >= self.line.len() { return None; }
-        let cur = self.line[i..i+1].chars().nth(0).unwrap();
+        let cur = self.line.as_bytes()[i] as char;
 
         // Add the current letter to the list.
         let mut new_seen = seen;
@@ -30,8 +30,7 @@ impl <'a> Scanner<'a> {
         if i < self.length { return self._scan(i + 1, new_seen); }
 
         // Drop the last letter and scan on...
-        let last_index = i - self.length;
-        let last = self.line[last_index..last_index+1].chars().nth(0).unwrap();
+        let last = self.line.as_bytes()[i - self.length] as char;
         let last_count = new_seen.remove(&last).expect("Last wasn't present");
         if last_count > 1 { new_seen.insert(last, last_count - 1); }
 
