@@ -11,7 +11,7 @@ enum Direction {
     Right,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Move {
     direction: Direction,
     distance: usize,
@@ -46,7 +46,7 @@ fn follow_coord(head: Coord, tail: Coord) -> Coord {
     let delta_x = t_x - h_x;
     let delta_y = t_y - h_y;
 
-    println!("{:?}-{:?} ({:?})", head, tail, (delta_x, delta_y));
+    // println!("{:?}-{:?} {:?}", head, tail, (delta_x, delta_y));
 
     return match (delta_x, delta_y) {
         // cases where the tail does not need to move.
@@ -73,6 +73,11 @@ fn follow_coord(head: Coord, tail: Coord) -> Coord {
         ( 2,  1) => (t_x - 1, t_y - 1),
         ( 1, -2) => (t_x - 1, t_y + 1),
         (-1, -2) => (t_x + 1, t_y + 1),
+        // Cases where the tail needs to move diagonally
+        (-2, -2) => (t_x + 1, t_y + 1),
+        (-2,  2) => (t_x + 1, t_y - 1),
+        ( 2,  2) => (t_x - 1, t_y - 1),
+        ( 2, -2) => (t_x - 1, t_y + 1),
         // Shouldn't be possible:
         _ => panic!("Invalid delta x / delta y {:?}", (delta_x, delta_y)),
     };
@@ -80,28 +85,40 @@ fn follow_coord(head: Coord, tail: Coord) -> Coord {
 
 struct Rope {
     head: Coord,
-    tail: Coord,
-    visited: HashSet<Coord>,
+    tail: Option<Box<Rope>>,
 }
 
 impl Rope {
-    fn new() -> Self {
-        let zero = (0i32, 0i32);
-        let mut visited = HashSet::new();
-        visited.insert((0i32, 0i32));
-        return Self{head: zero, tail: zero, visited: visited};
+    fn new(len: usize) -> Self {
+        let zero = (0, 0);
+        if len == 0 { return Self{head: zero, tail: None}; }
+        let cdr = Box::new(Self::new(len - 1));
+        return Self{head: zero, tail: Some(cdr)};
     }
 
-    fn move_head(&mut self, direction: Direction) {
-        self.head = move_coord(self.head, direction);
-        self.tail = follow_coord(self.head, self.tail);
-        self.visited.insert(self.tail);
+    fn describe(&self, depth: usize) {
+        println!("{}:{:?}", depth, self.head);
+        if self.tail.is_none() { return; }
+        return self.tail.as_ref().unwrap().describe(depth + 1);
     }
 
-    fn apply_move(&mut self, m: Move) {
+    fn follow_head(&mut self, head: Coord) -> Coord {
+        self.head = follow_coord(head, self.head);
+        if self.tail.is_none() { return self.head; }
+        return self.tail.as_mut()
+            .unwrap()
+            .follow_head(self.head);
+    }
+
+    // Assumes that this has a tail, otherwise it will crash.
+    fn apply_move(&mut self, m: Move, visited: &mut HashSet<Coord>) {
         if m.distance == 0 { return; }
-        self.move_head(m.direction);
-        return self.apply_move(m.next());
+        self.head = move_coord(self.head, m.direction);
+        let tail_pos = self.tail.as_mut()
+            .unwrap()
+            .follow_head(self.head);
+        visited.insert(tail_pos);
+        return self.apply_move(m.next(), visited);
     }
 }
 
@@ -123,10 +140,16 @@ fn main() {
         })
         .collect();
 
-    let mut rope = Rope::new();
+    let mut short_rope = Rope::new(1);
+    let mut short_visited = HashSet::new();
+
+    let mut long_rope = Rope::new(9);
+    let mut long_visited = HashSet::new();
+
     for m in moves {
-        println!("apply {:?}", m);
-        rope.apply_move(m);
+        long_rope.apply_move(m, &mut long_visited);
+        short_rope.apply_move(m, &mut short_visited);
     }
-    println!("spots visited: {}", rope.visited.len());
+    println!("short spots visited: {}", short_visited.len());
+    println!("long spots visited: {}", long_visited.len());
 }
