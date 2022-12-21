@@ -68,8 +68,17 @@ fn main() {
 
     let mut signal = 0i64;
     let mut register = 1;
-    let mut cycle = 0;
+    let mut cycle = 0usize;
     loop {
+        let pixel = cycle % 40;
+
+        if pixel == 0 { println!(""); }
+        let msg = match (register - pixel as i64) as i64 {
+            -1..=1 => "#",
+            _ => " ",
+        };
+        print!("{}", msg);
+
         if insns.is_empty() { break; }
         let insn = &mut insns[0];
         insn.count_down();
@@ -82,5 +91,6 @@ fn main() {
         cycle += 1;
         if is_signal_turn(cycle) { signal += before * cycle as i64; }
     }
+    println!("");
     println!("Signal strength is {}", signal);
 }
