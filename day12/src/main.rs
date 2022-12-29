@@ -1,11 +1,42 @@
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+
 type Coord = (usize, usize);
 
 #[derive(PartialEq)]
 enum Position { Normal, Start, End }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+struct State {
+    cost: usize,
+    position: Coord,
+}
+
+impl State {
+    fn new(cost: usize, position: Coord) -> Self {
+        return Self{cost: cost, position: position};
+    }
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let ret = other.cost.cmp(&self.cost)
+            .then_with(|| other.position.cmp(&self.position));
+        // println!("{:?} <=> {:?} = {:?}", self, other, ret);
+        return ret;
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        return Some(self.cmp(other));
+    }
+}
+
 struct Cell {
     elevation: usize,
     position: Position,
+    cost: usize,
 }
 
 impl Cell {
@@ -30,6 +61,7 @@ impl Cell {
         return Self{
             elevation: Cell::get_height(height),
             position: Cell::get_position(height),
+            cost: usize::MAX,
         };
     }
 }
@@ -56,7 +88,7 @@ struct Board {
 }
 
 impl Board {
-    fn new(lines: Vec<String>) -> Self {
+    fn new(lines: &Vec<String>) -> Self {
         let mut rows: Vec<Vec<Cell>> = Vec::new();
         for line in lines {
             rows.push(line.bytes().map(Cell::new).collect());
@@ -84,6 +116,10 @@ impl Board {
 
     fn get_cell(&self, coord: Coord) -> &Cell {
         return &self.cells[coord.0][coord.1];
+    }
+
+    fn get_cell_mut(&mut self, coord: Coord) -> &mut Cell {
+        return &mut self.cells[coord.0][coord.1];
     }
 
     fn distance_to_end(&self, coord: Coord) -> usize {
@@ -120,6 +156,63 @@ impl Board {
             println!("{}", cur);
         }
     }
+
+    fn show_costs(&self) {
+        for row in self.cells.iter() {
+            let cur = row.iter()
+                .map(|c| c.cost)
+                .map(|c| format!("{:2}", c))
+                .collect::<Vec<String>>()
+                .join(" ");
+            println!("{}", cur);
+        }
+    }
+
+    fn find_all_a_elevations(&self) -> Vec<Coord> {
+        let mut ret = Vec::new();
+
+        for (i, row) in self.cells.iter().enumerate() {
+            for (j, cell) in row.iter().enumerate() {
+                if cell.elevation > 0 { continue; }
+                ret.push((i, j));
+            }
+        }
+
+        return ret;
+    }
+}
+
+// Find the shortest path from board.start to end. If any_a is true, then the
+// cost to reach any square at elevation a is 0.
+fn shortest_path(board: &mut Board, any_a: bool) -> Option<usize> {
+    let mut positions = BinaryHeap::<State>::new();
+    let initial_positions = match any_a {
+        true => board.find_all_a_elevations(),
+        false => vec![board.begin],
+    };
+    for cell in initial_positions {
+        positions.push(State::new(0, cell));
+        board.get_cell_mut(cell).cost = 0;
+    }
+
+    while let Some(State { cost, position }) = positions.pop() {
+        if position == board.end { return Some(cost); }
+        let cell = board.get_cell(position);
+        if cost > cell.cost { continue; }
+
+        for neighbor in board.get_adjacent(position) {
+            let mut cell = board.get_cell_mut(neighbor);
+            let mut next_cost = cost + 1;
+            if any_a && cell.elevation == 0 { next_cost = 0; }
+            let next = State::new(next_cost, neighbor);
+            if next.cost < cell.cost {
+                positions.push(next);
+                board.get_cell_mut(neighbor).cost = next.cost;
+            }
+        }
+    }
+
+    return None;
 }
 
 fn main() {
@@ -127,7 +220,13 @@ fn main() {
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<String>>();
-    let board = Board::new(input);
-    board.display();
-    println!("{:?}", board.get_adjacent(board.begin));
+    {
+        let mut board = Board::new(&input);
+        board.display();
+        println!("Cost from start: {:?}", shortest_path(&mut board, false));
+    }
+    {
+        let mut board = Board::new(&input);
+        println!("Cost from any a: {:?}", shortest_path(&mut board, true));
+    }
 }
