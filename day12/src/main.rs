@@ -122,16 +122,6 @@ impl Board {
         return &mut self.cells[coord.0][coord.1];
     }
 
-    fn distance_to_end(&self, coord: Coord) -> usize {
-        let (crow, ccol) = coord;
-        let (erow, ecol) = self.end;
-
-        return (
-            (erow as i64 - crow as i64).abs() +
-            (ecol as i64 - ccol as i64).abs()
-        ) as usize;
-    }
-
     fn get_adjacent(&self, from: Coord) -> Vec<Coord> {
         let height = self.get_cell(from).elevation;
         let (row, col) = from;
@@ -157,6 +147,7 @@ impl Board {
         }
     }
 
+    #[allow(dead_code)]
     fn show_costs(&self) {
         for row in self.cells.iter() {
             let cur = row.iter()
@@ -201,9 +192,11 @@ fn shortest_path(board: &mut Board, any_a: bool) -> Option<usize> {
         if cost > cell.cost { continue; }
 
         for neighbor in board.get_adjacent(position) {
-            let mut cell = board.get_cell_mut(neighbor);
-            let mut next_cost = cost + 1;
-            if any_a && cell.elevation == 0 { next_cost = 0; }
+            let cell = board.get_cell_mut(neighbor);
+            let next_cost = match any_a && cell.elevation == 0 {
+                true => 0,
+                false => cost + 1,
+            };
             let next = State::new(next_cost, neighbor);
             if next.cost < cell.cost {
                 positions.push(next);
