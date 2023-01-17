@@ -1,7 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Packet {
-    None,
-    Int(u32),
+    Int(i32),
     List(Vec<Packet>),
 }
 
@@ -16,14 +15,14 @@ impl Packet {
         return Packet::List(ret);
     }
 
-    fn parse_int(input: &str, cur: u32) -> (&str, u32) {
+    fn parse_int(input: &str, cur: i32) -> (&str, i32) {
         let cur_char = match input.chars().nth(0) {
             Some(c) => c,
             None => return (input, cur),
         };
 
         let digit = match cur_char {
-            '0'..='9' => cur_char as u32 - '0' as u32,
+            '0'..='9' => cur_char as i32 - '0' as i32,
             _ => return (input, cur),
         };
 
@@ -58,11 +57,66 @@ impl Packet {
 
         panic!("Unexpected character encountered! '{}'", cur_char);
     }
+
+    fn compare(&self, other: &Self) -> i32 {
+        return match self {
+            Self::Int(_) => self.compare_int(other),
+            Self::List(_) => self.compare_list(other),
+        };
+    }
+
+    fn compare_int(&self, other: &Self) -> i32 {
+        let self_value = match self {
+            Self::Int(i) => i,
+            _ => panic!("compare_int called on non int packet!"),
+        };
+
+        if let Self::Int(other_value) = other {
+            return (self_value - other_value).signum();
+        }
+
+        return Self::List(vec![self.clone()]).compare(other);
+    }
+
+    fn compare_list(&self, other: &Self) -> i32 {
+        let self_list = match self {
+            Self::List(l) => l,
+            _ => panic!("compare_list called on non list packet!"),
+        };
+        let self_len = self_list.len();
+
+        if let Self::List(other_list) = other {
+            let other_len = other_list.len();
+            if self_len > other_len {
+                return -other.compare_list(self);
+            }
+
+            for i in 0..self_len {
+                let self_cur = &self_list[i];
+                let other_cur = &other_list[i];
+                let comparison = self_cur.compare(other_cur);
+                if comparison != 0 { return comparison; }
+            }
+            if self_len == other_len { return 0; }
+            return -1;
+        }
+
+        return self.compare_list(&Self::List(vec![other.clone()]));
+    }
 }
 
 fn main() {
-    let packet = "[1,2,[[],4,5],3]".to_string();
+    let packets = std::env::args()
+        .skip(1)
+        .map(Packet::new)
+        .collect::<Vec<Packet>>();
 
-    println!("{}", packet);
-    println!("{:?}", Packet::new(packet));
+    if packets.len() < 2 { std::process::exit(1); }
+
+    let a = &packets[0];
+    let b = &packets[1];
+
+    println!("{:?}", a);
+    println!("{:?}", b);
+    println!("{}", a.compare(b));
 }
