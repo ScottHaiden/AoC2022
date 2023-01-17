@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 #[derive(Debug, Clone)]
 enum Packet {
     Int(i32),
@@ -106,7 +108,7 @@ impl Packet {
 }
 
 fn main() {
-    let lines = std::io::stdin()
+    let mut lines = std::io::stdin()
         .lines()
         .map(Result::unwrap)
         .filter(|i| i.len() > 0)
@@ -128,4 +130,25 @@ fn main() {
 
     println!("Sum of in order indices: {}", sum);
 
+    let divider_two = Packet::new("[[2]]".to_string());
+    let divider_six = Packet::new("[[6]]".to_string());
+
+    lines.push(divider_two.clone());
+    lines.push(divider_six.clone());
+
+    lines.sort_by(|a, b| match a.compare(&b) {
+        -1 => Ordering::Less,
+        0 => Ordering::Equal,
+        1 => Ordering::Greater,
+        _ => panic!("Invalid comparison result"),
+    });
+
+    let divider_two_location = lines.iter()
+        .position(|i| i.compare(&divider_two) == 0)
+        .unwrap() + 1;
+    let divider_six_location = lines.iter()
+        .position(|i| i.compare(&divider_six) == 0)
+        .unwrap() + 1;
+
+    println!("part two: {}", divider_two_location * divider_six_location);
 }
