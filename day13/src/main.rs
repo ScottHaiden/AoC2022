@@ -106,17 +106,26 @@ impl Packet {
 }
 
 fn main() {
-    let packets = std::env::args()
-        .skip(1)
+    let lines = std::io::stdin()
+        .lines()
+        .map(Result::unwrap)
+        .filter(|i| i.len() > 0)
         .map(Packet::new)
         .collect::<Vec<Packet>>();
 
-    if packets.len() < 2 { std::process::exit(1); }
+    let mut sum = 0;
+    for (i, pair) in (1..).zip(lines.chunks(2)) {
+        let comp = pair[0].compare(&pair[1]);
+        let in_order = comp <= 0;
+        println!("{:2}:", i);
+        println!("  {:?}", pair[0]);
+        println!("  {:?}", pair[1]);
+        println!("  in the right order? {}", in_order);
+        println!("");
 
-    let a = &packets[0];
-    let b = &packets[1];
+        if in_order { sum += i; }
+    }
 
-    println!("{:?}", a);
-    println!("{:?}", b);
-    println!("{}", a.compare(b));
+    println!("Sum of in order indices: {}", sum);
+
 }
