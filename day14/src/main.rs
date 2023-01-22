@@ -99,6 +99,7 @@ impl Cell {
     }
 }
 
+#[derive(Clone)]
 struct Board {
     cells: Vec<Vec<Cell>>,
 }
@@ -142,7 +143,7 @@ impl Board {
     fn simulate_grain(&mut self, coord: Coord) -> bool {
         if self.get(coord) == None { return false; }
 
-        let mut can_try_cell = |coord: Coord| -> bool {
+        let can_try_cell = |coord: Coord| -> bool {
             return match self.get(coord) {
                 None => true,
                 Some(Cell::Empty) => true,
