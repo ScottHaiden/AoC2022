@@ -33,6 +33,18 @@ impl Coord {
             .collect::<Vec<Self>>();
     }
 
+    fn down(&self) -> Self {
+        return Self::new(self.x, self.y + 1);
+    }
+
+    fn down_left(&self) -> Self {
+        return Self::new(self.x - 1, self.y + 1);
+    }
+
+    fn down_right(&self) -> Self {
+        return Self::new(self.x + 1, self.y + 1);
+    }
+
     fn cells_in_wall(vertices: &Vec<Coord>) -> Vec<Coord> {
         let mut ret = Vec::new();
 
@@ -70,7 +82,7 @@ impl Coord {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Cell {
     Empty,
     Wall,
@@ -78,10 +90,6 @@ enum Cell {
 }
 
 impl Cell {
-    fn new() -> Self {
-        return Self::Empty;
-    }
-
     fn get_char(&self) -> &'static str {
         return match self {
             Self::Empty => ".",
@@ -100,7 +108,7 @@ impl Board {
         return Board{cells: vec![vec![Cell::Empty]]};
     }
 
-    fn set_cell(&mut self, coord: Coord, value: Cell) {
+    fn set(&mut self, coord: Coord, value: Cell) {
         let Coord{x, y} = coord;
 
         let rows = self.rows();
@@ -122,6 +130,40 @@ impl Board {
     fn rows(&self) -> usize { return self.cells.len(); }
     fn cols(&self) -> usize { return self.cells[0].len(); }
 
+    fn get(&self, coord: Coord) -> Option<Cell> {
+        let Coord{x, y} = coord;
+        if x >= self.cols() { return None; }
+        if y >= self.rows() { return None; }
+        return Some(self.cells[y][x]);
+    }
+
+    // Returns true, if the sand falls into the abyss, otherwise records where the sand fell and
+    // returns false.
+    fn simulate_grain(&mut self, coord: Coord) -> bool {
+        if self.get(coord) == None { return false; }
+
+        let mut can_try_cell = |coord: Coord| -> bool {
+            return match self.get(coord) {
+                None => true,
+                Some(Cell::Empty) => true,
+                _ => false,
+            };
+        };
+
+        if can_try_cell(coord.down()) {
+            return self.simulate_grain(coord.down());
+        }
+        if can_try_cell(coord.down_left()) {
+            return self.simulate_grain(coord.down_left());
+        }
+        if can_try_cell(coord.down_right()) {
+            return self.simulate_grain(coord.down_right());
+        }
+
+        self.set(coord, Cell::Sand);
+        return true;
+    }
+
     fn describe(&self) {
         println!("board {} x {}", self.rows(), self.cols());
     }
@@ -135,6 +177,14 @@ impl Board {
             println!("");
         }
     }
+
+    fn add_walls(&mut self, wall_vertices: &Vec<Vec<Coord>>) {
+        for wall in wall_vertices {
+            for coord in Coord::cells_in_wall(wall) {
+                self.set(coord, Cell::Wall);
+            }
+        }
+    }
 }
 
 fn main() {
@@ -145,10 +195,13 @@ fn main() {
         .collect::<Vec<Vec<Coord>>>();
 
     let mut board = Board::new();
-    for line in lines.iter() {
-        for coord in Coord::cells_in_wall(line) {
-            board.set_cell(coord, Cell::Wall);
-        }
+    board.add_walls(&lines);
+
+    for grains in 0.. {
+        let keep_going = board.simulate_grain(Coord::new(500, 0));
+        if keep_going { continue; }
+        board.print();
+        println!("held {} grains", grains);
+        break;
     }
-    board.print();
 }
