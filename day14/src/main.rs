@@ -188,6 +188,33 @@ impl Board {
     }
 }
 
+fn part_one(mut board: Board) {
+    for grains in 0.. {
+        let keep_going = board.simulate_grain(Coord::new(500, 0));
+        if keep_going { continue; }
+        board.print();
+        println!("held {} grains", grains);
+        break;
+    }
+}
+
+fn part_two(mut board: Board) {
+    let floor_y = board.rows() + 1;
+    let bottom_wall = vec![Coord::new(0, floor_y), Coord::new(1000, floor_y)];
+    board.add_walls(&vec![bottom_wall]);
+
+    for grains in 1.. {
+        let keep_going = board.simulate_grain(Coord::new(500, 0));
+        assert!(keep_going);
+
+        if board.get(Coord::new(500, 0)) != Some(Cell::Sand) { continue; }
+        
+        board.print();
+        println!("held {} grains", grains);
+        break;
+    }
+}
+
 fn main() {
     let lines = std::io::stdin()
         .lines()
@@ -198,11 +225,6 @@ fn main() {
     let mut board = Board::new();
     board.add_walls(&lines);
 
-    for grains in 0.. {
-        let keep_going = board.simulate_grain(Coord::new(500, 0));
-        if keep_going { continue; }
-        board.print();
-        println!("held {} grains", grains);
-        break;
-    }
+    part_one(board.clone());
+    part_two(board);
 }
